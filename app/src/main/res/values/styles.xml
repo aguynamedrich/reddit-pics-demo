@@ -2,8 +2,12 @@
 
     <!-- Base application theme. -->
     <style name="AppTheme"
-           parent="Theme.AppCompat.Light.DarkActionBar">
+           parent="Theme.AppCompat.Light.NoActionBar">
+
         <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/flipagram_red</item>
+        <item name="colorPrimaryDark">@color/flipagram_dark_red</item>
+        <item name="colorAccent">@color/accent</item>
     </style>
 
 </resources>
