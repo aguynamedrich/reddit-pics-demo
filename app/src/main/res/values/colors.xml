@@ -3,4 +3,6 @@
     <color name="flipagram_red">#E84F3C</color>
     <color name="flipagram_dark_red">#CC4735</color>
     <color name="accent">#1D7295</color>
+
+    <color name="image_background">#11000000</color>
 </resources>
