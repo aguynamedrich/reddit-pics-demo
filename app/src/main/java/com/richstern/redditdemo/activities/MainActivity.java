@@ -64,7 +64,8 @@ public class MainActivity extends RxAppCompatActivity implements SwipeRefreshLay
         mRecyclerView.addOnScrollListener(mOnScrollListener);
         mSwipeRefreshLayout.setOnRefreshListener(this);
         mSwipeRefreshLayout.setColorSchemeColors(
-            getResources().getColor(R.color.accent)
+            getResources().getColor(R.color.accent),
+            getResources().getColor(R.color.flipagram_red)
         );
 
         initServices();
