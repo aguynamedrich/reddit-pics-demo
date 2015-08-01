@@ -12,13 +12,16 @@ import com.google.gson.GsonBuilder;
 import com.richstern.redditdemo.R;
 import com.richstern.redditdemo.adapters.PhotosAdapter;
 import com.richstern.redditdemo.model.Photos;
+import com.richstern.redditdemo.model.validators.PhotosValidator;
 import com.richstern.redditdemo.net.RedditPhotoService;
 import com.richstern.redditdemo.util.PhotosDeserializer;
+import com.richstern.redditdemo.util.StringUtils;
 import com.trello.rxlifecycle.components.support.RxAppCompatActivity;
 import retrofit.RestAdapter;
 import retrofit.converter.GsonConverter;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
+import rx.subjects.BehaviorSubject;
 
 public class MainActivity extends RxAppCompatActivity implements SwipeRefreshLayout.OnRefreshListener {
 
@@ -28,7 +31,25 @@ public class MainActivity extends RxAppCompatActivity implements SwipeRefreshLay
     @InjectView(R.id.swipe) SwipeRefreshLayout mSwipeRefreshLayout;
     @InjectView(R.id.list) RecyclerView mRecyclerView;
 
+    private final BehaviorSubject<String> mFetchAfterSubject = BehaviorSubject.create();
+
+    private RecyclerView.OnScrollListener mOnScrollListener = new RecyclerView.OnScrollListener() {
+
+        @Override
+        public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+            super.onScrolled(recyclerView, dx, dy);
+            int itemCount = mLayoutManager.getItemCount();
+            int lastVisibleItemPosition = mLayoutManager.findLastVisibleItemPosition();
+            if (lastVisibleItemPosition == itemCount - 1 && PhotosValidator.hasAfter(mPhotos)) {
+                mFetchAfterSubject.onNext(mPhotos.getAfter());
+            }
+        }
+    };
+
     RedditPhotoService mPhotoService;
+    Photos mPhotos;
+    PhotosAdapter mPhotosAdapter;
+    LinearLayoutManager mLayoutManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,10 +59,11 @@ public class MainActivity extends RxAppCompatActivity implements SwipeRefreshLay
         // Init UI components
         ButterKnife.inject(this);
         setSupportActionBar(mToolbar);
-        mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        mLayoutManager = new LinearLayoutManager(this);
+        mRecyclerView.setLayoutManager(mLayoutManager);
+        mRecyclerView.addOnScrollListener(mOnScrollListener);
         mSwipeRefreshLayout.setOnRefreshListener(this);
         mSwipeRefreshLayout.setColorSchemeColors(
-            getResources().getColor(R.color.flipagram_red),
             getResources().getColor(R.color.accent)
         );
 
@@ -50,16 +72,41 @@ public class MainActivity extends RxAppCompatActivity implements SwipeRefreshLay
     }
 
     @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mRecyclerView.removeOnScrollListener(mOnScrollListener);
+    }
+
+    @Override
     public void onRefresh() {
         initData();
     }
 
     private void initData() {
-        mPhotoService.getHotPhotos()
+        // Initial load
+        mPhotoService.getHotPhotos(null)
+            .doOnNext(__ -> runOnUiThread(() -> mSwipeRefreshLayout.setRefreshing(true)))
             .compose(bindToLifecycle())
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(this::bind, this::onErrorDownloading);
+
+        // Observable for loading more pages
+        mFetchAfterSubject
+            .filter(after -> !StringUtils.isNullOrEmpty(after))
+            .distinctUntilChanged()
+            .switchMap(mPhotoService::getHotPhotos)
+            .doOnNext(__ -> runOnUiThread(() -> mSwipeRefreshLayout.setRefreshing(true)))
+            .compose(bindToLifecycle())
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(this::merge, this::onErrorDownloading);
+    }
+
+    private void merge(Photos photos) {
+        mSwipeRefreshLayout.setRefreshing(false);
+        mPhotos.mergeWith(photos);
+        mPhotosAdapter.notifyDataSetChanged();
     }
 
     private void onErrorDownloading(Throwable throwable) {
@@ -81,6 +128,8 @@ public class MainActivity extends RxAppCompatActivity implements SwipeRefreshLay
 
     private void bind(Photos photos) {
         mSwipeRefreshLayout.setRefreshing(false);
-        mRecyclerView.setAdapter(new PhotosAdapter(photos.getPhotos()));
+        mPhotos = photos;
+        mPhotosAdapter = new PhotosAdapter(mPhotos.getPhotos());
+        mRecyclerView.setAdapter(mPhotosAdapter);
     }
 }
