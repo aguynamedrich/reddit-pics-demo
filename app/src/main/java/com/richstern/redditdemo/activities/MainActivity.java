@@ -1,5 +1,7 @@
 package com.richstern.redditdemo.activities;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
@@ -11,11 +13,14 @@ import butterknife.InjectView;
 import com.google.gson.GsonBuilder;
 import com.richstern.redditdemo.R;
 import com.richstern.redditdemo.adapters.PhotosAdapter;
+import com.richstern.redditdemo.model.Photo;
 import com.richstern.redditdemo.model.Photos;
 import com.richstern.redditdemo.model.validators.PhotosValidator;
 import com.richstern.redditdemo.net.RedditPhotoService;
+import com.richstern.redditdemo.rx.OnlyNextObserver;
 import com.richstern.redditdemo.util.PhotosDeserializer;
 import com.richstern.redditdemo.util.StringUtils;
+import com.trello.rxlifecycle.ActivityEvent;
 import com.trello.rxlifecycle.components.support.RxAppCompatActivity;
 import retrofit.RestAdapter;
 import retrofit.converter.GsonConverter;
@@ -132,5 +137,31 @@ public class MainActivity extends RxAppCompatActivity implements SwipeRefreshLay
         mPhotos = photos;
         mPhotosAdapter = new PhotosAdapter(mPhotos.getPhotos());
         mRecyclerView.setAdapter(mPhotosAdapter);
+
+        mPhotosAdapter.getThumbnailClickedSubject()
+            .filter(PhotosValidator::isSourceValid)
+            .compose(bindUntilEvent(ActivityEvent.DESTROY))
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(OnlyNextObserver.forAction(this::showImage));
+
+        mPhotosAdapter.getItemClickedSubject()
+            .filter(photo -> StringUtils.isValidUrl(photo.getPermalink()))
+            .compose(bindUntilEvent(ActivityEvent.DESTROY))
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(OnlyNextObserver.forAction(this::showPost));
+    }
+
+    private void showPost(Photo photo) {
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setData(Uri.parse(photo.getPermalink()));
+        startActivity(intent);
+    }
+
+    private void showImage(Photo photo) {
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setData(Uri.parse(photo.getSourceUrl()));
+        startActivity(intent);
     }
 }

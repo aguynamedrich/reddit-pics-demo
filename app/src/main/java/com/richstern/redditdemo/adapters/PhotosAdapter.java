@@ -11,10 +11,15 @@ import butterknife.InjectView;
 import com.richstern.redditdemo.R;
 import com.richstern.redditdemo.model.Photo;
 import com.squareup.picasso.Picasso;
+import rx.Observable;
+import rx.subjects.BehaviorSubject;
 
 import java.util.List;
 
 public class PhotosAdapter extends RecyclerView.Adapter<PhotosAdapter.PhotoViewHolder> {
+
+    private final BehaviorSubject<Photo> mThumbnailClickedSubject = BehaviorSubject.create();
+    private final BehaviorSubject<Photo> mItemClickedSubject = BehaviorSubject.create();
 
     private final List<Photo> mPhotos;
 
@@ -34,11 +39,21 @@ public class PhotosAdapter extends RecyclerView.Adapter<PhotosAdapter.PhotoViewH
         Photo photo = mPhotos.get(position);
         Picasso.with(holder.itemView.getContext()).load(photo.getThumbnail()).into(holder.mThumbnail);
         holder.mTitle.setText(photo.getTitle());
+        holder.itemView.setOnClickListener(__ -> mItemClickedSubject.onNext(photo));
+        holder.mThumbnail.setOnClickListener(__ -> mThumbnailClickedSubject.onNext(photo));
     }
 
     @Override
     public int getItemCount() {
         return mPhotos.size();
+    }
+
+    public Observable<Photo> getThumbnailClickedSubject() {
+        return mThumbnailClickedSubject.asObservable();
+    }
+
+    public Observable<Photo> getItemClickedSubject() {
+        return mItemClickedSubject.asObservable();
     }
 
     public static class PhotoViewHolder extends RecyclerView.ViewHolder {
