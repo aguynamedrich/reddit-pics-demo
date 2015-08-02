@@ -103,7 +103,7 @@ public class MainActivity extends RxAppCompatActivity implements SwipeRefreshLay
             .distinctUntilChanged()
             .switchMap(mPhotoService::getHotPhotos)
             .doOnNext(__ -> runOnUiThread(() -> mSwipeRefreshLayout.setRefreshing(true)))
-            .compose(bindToLifecycle())
+            .compose(bindUntilEvent(ActivityEvent.DESTROY))
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(this::merge, this::onErrorDownloading);
