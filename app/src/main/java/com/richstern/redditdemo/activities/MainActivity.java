@@ -140,28 +140,24 @@ public class MainActivity extends RxAppCompatActivity implements SwipeRefreshLay
 
         mPhotosAdapter.getThumbnailClickedSubject()
             .filter(PhotosValidator::isSourceValid)
+            .map(Photo::getSourceUrl)
             .compose(bindUntilEvent(ActivityEvent.DESTROY))
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(OnlyNextObserver.forAction(this::showImage));
+            .subscribe(OnlyNextObserver.forAction(this::view));
 
         mPhotosAdapter.getItemClickedSubject()
             .filter(photo -> StringUtils.isValidUrl(photo.getPermalink()))
+            .map(Photo::getPermalink)
             .compose(bindUntilEvent(ActivityEvent.DESTROY))
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(OnlyNextObserver.forAction(this::showPost));
+            .subscribe(OnlyNextObserver.forAction(this::view));
     }
 
-    private void showPost(Photo photo) {
+    private void view(String url) {
         Intent intent = new Intent(Intent.ACTION_VIEW);
-        intent.setData(Uri.parse(photo.getPermalink()));
-        startActivity(intent);
-    }
-
-    private void showImage(Photo photo) {
-        Intent intent = new Intent(Intent.ACTION_VIEW);
-        intent.setData(Uri.parse(photo.getSourceUrl()));
+        intent.setData(Uri.parse(url));
         startActivity(intent);
     }
 }
