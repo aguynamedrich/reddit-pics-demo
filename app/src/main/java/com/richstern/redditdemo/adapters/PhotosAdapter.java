@@ -12,14 +12,14 @@ import com.richstern.redditdemo.R;
 import com.richstern.redditdemo.model.Photo;
 import com.squareup.picasso.Picasso;
 import rx.Observable;
-import rx.subjects.BehaviorSubject;
+import rx.subjects.PublishSubject;
 
 import java.util.List;
 
 public class PhotosAdapter extends RecyclerView.Adapter<PhotosAdapter.PhotoViewHolder> {
 
-    private final BehaviorSubject<Photo> mThumbnailClickedSubject = BehaviorSubject.create();
-    private final BehaviorSubject<Photo> mItemClickedSubject = BehaviorSubject.create();
+    private final PublishSubject<Photo> mThumbnailClickedSubject = PublishSubject.create();
+    private final PublishSubject<Photo> mItemClickedSubject = PublishSubject.create();
 
     private final List<Photo> mPhotos;
 
