@@ -24,6 +24,7 @@ import com.trello.rxlifecycle.ActivityEvent;
 import com.trello.rxlifecycle.components.support.RxAppCompatActivity;
 import retrofit.RestAdapter;
 import retrofit.converter.GsonConverter;
+import rx.Observable;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 import rx.subjects.BehaviorSubject;
@@ -138,17 +139,13 @@ public class MainActivity extends RxAppCompatActivity implements SwipeRefreshLay
         mPhotosAdapter = new PhotosAdapter(mPhotos.getPhotos());
         mRecyclerView.setAdapter(mPhotosAdapter);
 
-        mPhotosAdapter.getThumbnailClickedSubject()
-            .filter(PhotosValidator::isSourceValid)
-            .map(Photo::getSourceUrl)
-            .compose(bindUntilEvent(ActivityEvent.DESTROY))
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(OnlyNextObserver.forAction(this::view));
-
-        mPhotosAdapter.getItemClickedSubject()
-            .filter(photo -> StringUtils.isValidUrl(photo.getPermalink()))
-            .map(Photo::getPermalink)
+        Observable.merge(
+            mPhotosAdapter.getThumbnailClickedSubject()
+                .filter(PhotosValidator::isSourceValid)
+                .map(Photo::getSourceUrl),
+            mPhotosAdapter.getItemClickedSubject()
+                .filter(photo -> StringUtils.isValidUrl(photo.getPermalink()))
+                .map(Photo::getPermalink))
             .compose(bindUntilEvent(ActivityEvent.DESTROY))
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
